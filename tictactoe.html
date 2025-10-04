@@ -1,0 +1,657 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>✨ Creative Tic-Tac-Toe — Play vs Human or Computer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+    :root{
+        --bg1: linear-gradient(135deg,#0f172a 0%, #0f254a 100%);
+        --card: rgba(255,255,255,0.06);
+        --glass: rgba(255,255,255,0.04);
+        --accent: #7c5cff;
+        --accent-2: #00d4ff;
+        --ok: #2dd4bf;
+        --danger: #ff6b6b;
+        --muted: rgba(255,255,255,0.6);
+        --glass-border: rgba(255,255,255,0.08);
+    }
+    *{box-sizing:border-box}
+    body{
+        margin:0;
+        min-height:100vh;
+        font-family:Inter,system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial;
+        background: var(--bg1);
+        color:#e6eef8;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:28px;
+    }
+
+    .app {
+        width:100%;
+        max-width:1100px;
+        display:grid;
+        grid-template-columns: 420px 1fr 320px;
+        gap:20px;
+        align-items:start;
+    }
+
+    /* Left: Controls */
+    .panel {
+        background: var(--card);
+        padding:18px;
+        border-radius:14px;
+        border:1px solid var(--glass-border);
+        box-shadow: 0 6px 20px rgba(2,6,23,0.6);
+    }
+    h2 { margin:0 0 10px 0; font-size:18px; letter-spacing:0.2px; color:var(--accent); }
+    label{ display:block; font-size:13px; margin-top:12px; color:var(--muted) }
+    input[type="text"], select {
+        width:100%; padding:10px 12px; margin-top:6px; border-radius:10px; background:transparent; border:1px solid var(--glass-border); color:inherit;
+    }
+    .row{display:flex; gap:8px; margin-top:12px}
+    .btn {
+        display:inline-flex; align-items:center; justify-content:center;
+        padding:10px 12px; border-radius:10px; cursor:pointer; border:none; font-weight:600;
+        background:linear-gradient(90deg,var(--accent),var(--accent-2)); color:#001018;
+        box-shadow: 0 6px 18px rgba(124,92,255,0.18);
+    }
+    .btn.ghost{ background:transparent; border:1px solid var(--glass-border); color:var(--muted); box-shadow:none; font-weight:600 }
+    .small { padding:8px 10px; font-size:13px; border-radius:8px; background: #a0b2b6;}
+
+    /* Center: Game */
+    .board-wrap{
+        display:flex; flex-direction:column; gap:14px;
+    }
+    .status {
+        background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02));
+        padding:12px; border-radius:12px; display:flex; align-items:center; justify-content:space-between; border:1px solid var(--glass-border);
+    }
+    .players {
+        display:flex; gap:12px; align-items:center;
+    }
+    .player {
+        display:flex; gap:8px; align-items:center;
+    }
+    .avatar {
+        width:42px; height:42px; border-radius:10px; display:grid; place-items:center; font-weight:800; color:#001018; background:linear-gradient(90deg,var(--accent),var(--accent-2));
+        box-shadow: 0 6px 12px rgba(0,0,0,0.35);
+    }
+    .turn { font-size:13px; color:var(--muted) }
+    .board {
+        width:100%;
+        max-width:560px;
+        aspect-ratio:1/1;
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+        border-radius:16px;
+        padding:18px;
+        display:grid;
+        grid-template-columns: repeat(3,1fr);
+        gap:12px;
+        border:1px solid var(--glass-border);
+        box-shadow: 0 10px 40px rgba(2,6,23,0.5);
+    }
+    .cell {
+        background: rgba(255,255,255,0.02);
+        border-radius:12px;
+        display:grid; place-items:center;
+        font-size:42px; font-weight:800; cursor:pointer; transition: transform .12s ease, background .12s;
+        user-select:none;
+        border:1px solid rgba(255,255,255,0.03);
+    }
+    .cell:hover { transform: translateY(-4px) scale(1.02) }
+    .cell.x { color: #ffd369; text-shadow: 0 4px 20px rgba(255,200,100,0.08) }
+    .cell.o { color: #82f0ff; text-shadow: 0 4px 30px rgba(0,200,255,0.06) }
+
+    .overlay {
+        margin-top:8px;
+        display:flex; gap:8px; align-items:center;
+    }
+
+    /* Right: History */
+    .history-list { max-height:560px; overflow:auto; margin-top:8px; }
+    .history-item { padding:10px; border-radius:10px; background:var(--glass); margin-bottom:8px; border:1px solid var(--glass-border); display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    .meta { font-size:12px; color:var(--muted) }
+
+    footer.note { margin-top:12px; font-size:12px; color:var(--muted) }
+
+    /* small screens */
+    @media (max-width:1000px){
+        .app{ grid-template-columns: 1fr; padding-bottom:60px }
+        .board-wrap{ order: -1 }
+    }
+    </style>
+    </head>
+    <body>
+    <div class="app">
+        <!-- LEFT PANEL: Game Settings -->
+        <div class="panel">
+        <h2>🎮 Game Setup</h2>
+
+        <label>Player 1 name</label>
+        <input id="p1Name" type="text" placeholder="e.g. Priya" value="Player 1">
+
+        <label>Player 2 name / CPU</label>
+        <input id="p2Name" type="text" placeholder="e.g. Rohan" value="Player 2">
+
+        <label style="margin-top:10px">Mode</label>
+        <div class="row">
+            <select id="modeSelect" class="small" style="flex:1; color: #001018;">
+            <option value="human">Player vs Player</option>
+            <option value="computer">Player vs Computer</option>
+            </select>
+            <button class="small ghost" id="swapBtn" title="Swap names">⇄ Swap</button>
+        </div>
+
+        <label style="margin-top:12px">Auto-restart rounds (when same players)</label>
+        <div style="display:flex; align-items:center; gap:8px; margin-top:8px">
+            <input type="checkbox" id="autoRestart" checked> <span style="font-size:13px; color:var(--muted)">Enabled</span>
+        </div>
+
+        <div class="row" style="margin-top:16px">
+            <button id="startBtn" class="btn">Start / Restart</button>
+            <button id="resetHistory" class="btn ghost">Clear History</button>
+        </div>
+
+        <div style="margin-top:14px; font-size:13px; color:var(--muted)">
+            <strong>Shortcuts:</strong> Use <kbd>R</kbd> to restart, <kbd>N</kbd> to toggle mode.
+        </div>
+
+        <div style="height:18px"></div>
+        <hr style="border:none;border-top:1px solid var(--glass-border)">
+
+        <h2 style="margin-top:12px">✨ Tips & Extras</h2>
+        <div class="meta">
+            • Computer uses a strategic algorithm — be ready. <br>
+            • History persists while you play the same matchup. If you change names or mode and press Start, history is cleared automatically. <br>
+            • Auto-restart begins the next round automatically (2s delay) when enabled.
+        </div>
+        </div>
+
+        <!-- CENTER: Board and Status -->
+        <div class="board-wrap">
+        <div class="panel status">
+            <div class="players">
+            <div class="player">
+                <div id="avatar1" class="avatar">X</div>
+                <div>
+                <div id="name1" style="font-weight:700">Player 1</div>
+                <div class="turn" id="score1">Wins: 0</div>
+                </div>
+            </div>
+
+            <div style="width:14px"></div>
+
+            <div class="player">
+                <div id="avatar2" class="avatar" style="background:linear-gradient(90deg,#00d4ff,#7c5cff)">O</div>
+                <div>
+                <div id="name2" style="font-weight:700">Player 2</div>
+                <div class="turn" id="score2">Wins: 0</div>
+                </div>
+            </div>
+            </div>
+
+            <div>
+            <div style="font-size:13px;color:var(--muted)" id="turnText">Turn: <strong>X</strong></div>
+            <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end">
+                <button id="undoBtn" class="small ghost">Undo</button>
+                <button id="newRoundBtn" class="small">New Round</button>
+            </div>
+            </div>
+        </div>
+
+        <div class="panel" style="padding:12px 18px;">
+            <div id="board" class="board" aria-label="tic tac toe board"></div>
+
+            <div class="overlay" id="messageArea" style="justify-content:space-between">
+            <div id="message" class="meta">Make a move to start — X goes first.</div>
+            <div style="display:flex; gap:8px;">
+                <button id="playSound" class="small ghost">🔊 Sound</button>
+                <button id="toggleAuto" class="small ghost">AutoRestart</button>
+            </div>
+            </div>
+
+        </div>
+        </div>
+
+        <!-- RIGHT: History -->
+        <div class="panel">
+        <h2>📜 Game History</h2>
+        <div id="history" class="history-list"></div>
+        <div class="note" style="margin-top:12px">
+            <div class="meta">History stores rounds for the current matchup (persisted to localStorage). Changing names or mode and pressing Start clears it.</div>
+        </div>
+        </div>
+    </div>
+
+    <script>
+    /* ------------------------------
+    Tic-Tac-Toe App JavaScript
+    ------------------------------ */
+
+    (() => {
+    // DOM
+    const boardEl = document.getElementById('board');
+    const startBtn = document.getElementById('startBtn');
+    const newRoundBtn = document.getElementById('newRoundBtn');
+    const undoBtn = document.getElementById('undoBtn');
+    const message = document.getElementById('message');
+    const turnText = document.getElementById('turnText');
+    const p1NameInput = document.getElementById('p1Name');
+    const p2NameInput = document.getElementById('p2Name');
+    const modeSelect = document.getElementById('modeSelect');
+    const score1El = document.getElementById('score1');
+    const score2El = document.getElementById('score2');
+    const name1El = document.getElementById('name1');
+    const name2El = document.getElementById('name2');
+    const avatar1 = document.getElementById('avatar1');
+    const avatar2 = document.getElementById('avatar2');
+    const historyEl = document.getElementById('history');
+    const autoRestartCheckbox = document.getElementById('autoRestart');
+    const resetHistoryBtn = document.getElementById('resetHistory');
+    const swapBtn = document.getElementById('swapBtn');
+
+    // Game state
+    let board = Array(9).fill(null); // 'X' or 'O' or null
+    let turn = 'X'; // current symbol
+    let moves = []; // history of moves for undo
+    let scores = { X: 0, O: 0, draws: 0 };
+    let isPlaying = false;
+    let vsComputer = false;
+    let p1Name = 'Player 1', p2Name = 'Player 2';
+    let currentMatchKey = ''; // string key for matchup to store history
+    let history = []; // array of rounds for current matchup
+    let autoRestart = true;
+    let autoRestartTimer = null;
+    let soundOn = false;
+
+    // Winning lines
+    const LINES = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+    ];
+
+    // Local Storage keys
+    const STORAGE_PREFIX = 'tictoe_v1_';
+    const STORAGE_MATCH = (key) => STORAGE_PREFIX + 'match_' + key;
+    const STORAGE_META = STORAGE_PREFIX + 'meta';
+
+    /* --------------------------
+        Utilities
+        -------------------------- */
+    function uidForMatch(p1, p2, mode){
+        // create canonical key for a matchup; when players swap it should still be unique if order matters.
+        return `${p1}::${p2}::${mode}`;
+    }
+
+    function saveMeta(){
+        localStorage.setItem(STORAGE_META, JSON.stringify({ lastMatchKey: currentMatchKey }));
+    }
+
+    function loadHistoryForMatch(key){
+        const raw = localStorage.getItem(STORAGE_MATCH(key));
+        return raw ? JSON.parse(raw) : [];
+    }
+
+    function saveHistoryForMatch(key, data){
+        localStorage.setItem(STORAGE_MATCH(key), JSON.stringify(data));
+    }
+
+    function clearHistoryForMatch(key){
+        localStorage.removeItem(STORAGE_MATCH(key));
+    }
+
+    function formatTimestamp(ts){
+        const d = new Date(ts);
+        return d.toLocaleString();
+    }
+
+    function playSoundClick(){
+        if(!soundOn) return;
+        // Simple beep via Web Audio
+        try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine'; o.frequency.value = 440;
+        o.connect(g); g.connect(ctx.destination);
+        g.gain.value = 0.02;
+        o.start();
+        setTimeout(()=>{ o.stop(); ctx.close(); }, 80);
+        } catch(e){}
+    }
+
+    /* --------------------------
+        Rendering
+        -------------------------- */
+    function renderBoard(){
+        boardEl.innerHTML = '';
+        for(let i=0;i<9;i++){
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (board[i] ? ' ' + board[i].toLowerCase() : '');
+        cell.dataset.index = i;
+        cell.innerHTML = board[i] ? board[i] : '';
+        cell.addEventListener('click', onCellClick);
+        boardEl.appendChild(cell);
+        }
+    }
+
+    function renderStatus(){
+        name1El.textContent = p1Name;
+        name2El.textContent = p2Name + (vsComputer ? ' (CPU)' : '');
+        score1El.textContent = `Wins: ${scores.X}`;
+        score2El.textContent = `Wins: ${scores.O}`;
+        turnText.innerHTML = `Turn: <strong>${turn}</strong> — ${turn === 'X' ? p1Name : p2Name}`;
+    }
+
+    function renderHistory(){
+        historyEl.innerHTML = '';
+        if(history.length === 0){
+        historyEl.innerHTML = '<div class="meta">No rounds yet. Play a round to populate history.</div>';
+        return;
+        }
+        // show latest first
+        const arr = [...history].reverse();
+        for(const h of arr){
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        const left = document.createElement('div');
+        left.innerHTML = `<div style="font-weight:700">${h.winner === 'Draw' ? 'Draw' : (h.winner === 'X' ? p1Name : p2Name)}</div>
+                            <div class="meta">${h.mode} • ${formatTimestamp(h.ts)}</div>`;
+        const right = document.createElement('div');
+        right.style.textAlign = 'right';
+        right.innerHTML = `<div class="meta">Moves: ${h.moves.length}</div>
+                            <div class="meta">${h.scoreX}-${h.scoreO} (X-O)</div>`;
+        div.appendChild(left); div.appendChild(right);
+        historyEl.appendChild(div);
+        }
+    }
+
+    /* --------------------------
+        Game Logic
+        -------------------------- */
+    function checkWinner(b){
+        for(const [a,c,d] of LINES){
+        if(b[a] && b[a] === b[c] && b[a] === b[d]) return b[a];
+        }
+        if(b.every(Boolean)) return 'Draw';
+        return null;
+    }
+
+    function makeMove(idx, symbol){
+        if(board[idx] || checkWinner(board)) return false;
+        board[idx] = symbol;
+        moves.push({ idx, symbol });
+        playSoundClick();
+        renderBoard();
+        const winner = checkWinner(board);
+        if(winner){
+        onRoundEnd(winner);
+        } else {
+        turn = (symbol === 'X') ? 'O' : 'X';
+        renderStatus();
+        if(vsComputer && turn === 'O') {
+            // small delay for realism
+            setTimeout(()=> computerMove(), 350);
+        }
+        }
+        return true;
+    }
+
+    function onCellClick(e){
+        if(!isPlaying) { setMessage('Start a game first.'); return; }
+        if(vsComputer && turn === 'O') return; // wait for computer
+        const idx = parseInt(e.currentTarget.dataset.index,10);
+        makeMove(idx, turn);
+    }
+
+    function onRoundEnd(winner){
+        if(winner === 'Draw'){
+        setMessage('Round result: Draw!');
+        scores.draws++;
+        } else {
+        setMessage(`Round winner: ${winner === 'X' ? p1Name : p2Name} 🎉`);
+        scores[winner]++;
+        }
+        renderStatus();
+
+        // Save history entry
+        const entry = {
+        ts: Date.now(),
+        winner: winner === 'Draw' ? 'Draw' : winner,
+        mode: vsComputer ? 'vs Computer' : 'vs Human',
+        moves: [...moves],
+        scoreX: scores.X,
+        scoreO: scores.O
+        };
+        history.push(entry);
+        saveHistoryForMatch(currentMatchKey, history);
+        renderHistory();
+
+        // Auto-restart if enabled and matchup same
+        if(autoRestart && isPlaying){
+        // small delay before auto restart (let user see result)
+        if(autoRestartTimer) clearTimeout(autoRestartTimer);
+        autoRestartTimer = setTimeout(()=>{
+            startNewRound(false); // keep scores/history
+        }, 2000);
+        } else {
+        isPlaying = false;
+        }
+    }
+
+    function startNewRound(resetScores=true){
+        if(resetScores){
+        scores = { X:0, O:0, draws:0 };
+        history = [];
+        saveHistoryForMatch(currentMatchKey, history);
+        }
+        board = Array(9).fill(null);
+        moves = [];
+        turn = 'X';
+        isPlaying = true;
+        renderBoard();
+        renderStatus();
+        renderHistory();
+        setMessage('New round started. X goes first.');
+        // If vs computer and computer is X, allow for that (but by default player is X)
+        if(vsComputer && turn === 'O') setTimeout(computerMove, 400);
+    }
+
+    /* --------------------------
+        Computer (AI) — minimax
+        -------------------------- */
+    function availableIndexes(b){
+        const arr = [];
+        for(let i=0;i<9;i++) if(!b[i]) arr.push(i);
+        return arr;
+    }
+
+    function computerMove(){
+        if(!isPlaying) return;
+        // simple minimax: computer plays 'O'
+        const best = minimax(board, 'O');
+        if(best.index !== undefined){
+        makeMove(best.index, 'O');
+        } else {
+        // fallback random
+        const avail = availableIndexes(board);
+        if(avail.length>0) makeMove(avail[Math.floor(Math.random()*avail.length)], 'O');
+        }
+    }
+
+    function minimax(newBoard, player){
+        const huPlayer = 'X', aiPlayer = 'O';
+        const winner = checkWinner(newBoard);
+        if(winner === huPlayer) return { score: -10 };
+        if(winner === aiPlayer) return { score: 10 };
+        if(winner === 'Draw') return { score: 0 };
+
+        const availSpots = availableIndexes(newBoard);
+        const movesList = [];
+
+        for(let i=0;i<availSpots.length;i++){
+        const idx = availSpots[i];
+        const move = {};
+        move.index = idx;
+        newBoard[idx] = player;
+
+        if(player === aiPlayer){
+            const result = minimax(newBoard, huPlayer);
+            move.score = result.score;
+        } else {
+            const result = minimax(newBoard, aiPlayer);
+            move.score = result.score;
+        }
+        // reset spot
+        newBoard[idx] = null;
+        movesList.push(move);
+        }
+
+        // choose best move
+        let bestMove;
+        if(player === aiPlayer){
+        let bestScore = -Infinity;
+        for(const m of movesList) if(m.score > bestScore){ bestScore = m.score; bestMove = m; }
+        } else {
+        let bestScore = Infinity;
+        for(const m of movesList) if(m.score < bestScore){ bestScore = m.score; bestMove = m; }
+        }
+        return bestMove || {};
+    }
+
+    /* --------------------------
+        UI Helpers
+        -------------------------- */
+    function setMessage(txt){
+        message.textContent = txt;
+    }
+
+    function resetMatchIfDifferent(){
+        const key = uidForMatch(p1Name.trim() || 'Player 1', p2Name.trim() || 'Player 2', vsComputer ? 'computer' : 'human');
+        if(currentMatchKey && currentMatchKey !== key){
+        // different matchup -> clear history for new match
+        history = [];
+        clearHistoryForMatch(key);
+        }
+        currentMatchKey = key;
+        // load existing history
+        history = loadHistoryForMatch(key);
+        // if history belongs to different players (e.g., swapped), the storage is keyed so it's good
+    }
+
+    /* --------------------------
+        Controls & Events
+        -------------------------- */
+    startBtn.addEventListener('click', ()=>{
+        p1Name = p1NameInput.value.trim() || 'Player 1';
+        p2Name = p2NameInput.value.trim() || (modeSelect.value === 'computer' ? 'Computer' : 'Player 2');
+        vsComputer = (modeSelect.value === 'computer');
+        autoRestart = autoRestartCheckbox.checked;
+        // build match key, clear history if mode/name changed
+        const prevKey = currentMatchKey;
+        const newKey = uidForMatch(p1Name, p2Name, vsComputer ? 'computer' : 'human');
+        if(prevKey && prevKey !== newKey){
+        // clear previous match's history view and localStorage for the newKey
+        // we DO NOT delete old match's saved history, we simply clear the view for the new match
+        // but per requirement: "Clear history when game is restarted with another player or computer."
+        // So clear the storage for the newKey (fresh) and also clear our in-memory history.
+        clearHistoryForMatch(newKey);
+        }
+        currentMatchKey = newKey;
+        saveMeta();
+        // start new round keeping scores reset
+        startNewRound(true);
+        // set names on UI
+        renderStatus();
+        // clear any existing saved history for this match - already cleared above
+        history = loadHistoryForMatch(currentMatchKey) || [];
+        renderHistory();
+    });
+
+    newRoundBtn.addEventListener('click', ()=>{
+        // Start a fresh round but keep scores/hisotry
+        if(autoRestartTimer) clearTimeout(autoRestartTimer);
+        startNewRound(false);
+    });
+
+    undoBtn.addEventListener('click', ()=>{
+        if(moves.length === 0) return;
+        const last = moves.pop();
+        board[last.idx] = null;
+        // switch turn back to the symbol of undone move
+        turn = last.symbol;
+        renderBoard();
+        renderStatus();
+        setMessage('Undo performed');
+    });
+
+    resetHistoryBtn.addEventListener('click', ()=>{
+        if(!currentMatchKey) return;
+        if(confirm('Clear history for the current matchup?')){
+        history = [];
+        saveHistoryForMatch(currentMatchKey, history);
+        renderHistory();
+        }
+    });
+
+    swapBtn.addEventListener('click', ()=>{
+        const a = p1NameInput.value;
+        p1NameInput.value = p2NameInput.value;
+        p2NameInput.value = a;
+    });
+
+    // Toggle autoRestart via in-panel button
+    document.getElementById('toggleAuto').addEventListener('click', ()=>{
+        autoRestart = !autoRestart;
+        autoRestartCheckbox.checked = autoRestart;
+        setMessage('Auto-restart ' + (autoRestart ? 'enabled' : 'disabled'));
+    });
+
+    // Sound toggle
+    document.getElementById('playSound').addEventListener('click', ()=>{
+        soundOn = !soundOn;
+        setMessage('Sound ' + (soundOn ? 'on' : 'off'));
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+        if(e.key.toLowerCase() === 'r'){ // Restart
+        startBtn.click();
+        } else if(e.key.toLowerCase() === 'n'){ // Toggle mode
+        modeSelect.value = modeSelect.value === 'human' ? 'computer' : 'human';
+        setMessage('Mode toggled: ' + (modeSelect.value === 'computer' ? 'vs Computer' : 'vs Human'));
+        }
+    });
+
+    // Load last match meta (optional)
+    (function initFromStorage(){
+        const meta = JSON.parse(localStorage.getItem(STORAGE_META) || '{}');
+        if(meta && meta.lastMatchKey){
+        currentMatchKey = meta.lastMatchKey;
+        history = loadHistoryForMatch(currentMatchKey) || [];
+        renderHistory();
+        } else {
+        renderHistory();
+        }
+    })();
+
+    // initial render and default start (but not playing until start pressed)
+    renderBoard();
+    renderStatus();
+    setMessage('Enter names and press Start. X goes first.');
+
+    // Persists history each time window unloads (already saved on round end)
+    window.addEventListener('beforeunload', ()=>{
+        if(currentMatchKey) saveHistoryForMatch(currentMatchKey, history);
+        saveMeta();
+    });
+
+    })();
+    </script>
+    </body>
+    </html>
